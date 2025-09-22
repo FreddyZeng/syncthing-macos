@@ -55,7 +55,7 @@ let MaxKeepLogLines = 200
     }
 
     private func launchSync() {
-        NSLog("Launching Syncthing daemon")
+        NSLog("Launching Syncthing daemon: \(path)")
         shouldTerminate = false
 
         // Since release v1.7.0-1 we don't allow Syncthing daemon to update by itself
@@ -64,7 +64,7 @@ let MaxKeepLogLines = 200
 
         let p = Process()
         p.environment = environment
-        p.arguments = ["-no-browser", "-no-restart", "-logfile=default"]
+        p.arguments = ["--no-browser", "--no-restart", "--logfile=default"]
         p.arguments?.append(contentsOf: self.arguments)
         p.launchPath = path
         p.standardInput = Pipe() // isolate daemon from our stdin

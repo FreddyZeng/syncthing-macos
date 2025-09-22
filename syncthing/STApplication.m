@@ -71,10 +71,26 @@
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
-    _executable = [NSString stringWithFormat:@"%@/%@",
+    _executable = self.arguments = [defaults stringForKey:@"Executable"];
+
+    // Check that the excutable is valid (not null, exists and is executable)
+    // If it's not, nullify it so that it will be set to the default value
+    if (_executable) {
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        if (![fileManager fileExistsAtPath:_executable]) {
+            NSLog(@"Resetting Syncthing daemon executable path because it doesn't exist: (%@)", _executable);
+            _executable = nil;
+        } else if (![fileManager isExecutableFileAtPath:_executable]) {
+            NSLog(@"Resetting Syncthing daemon executable path because it's non-executable: (%@)", _executable);
+            _executable = nil;
+        }
+    }
+
+    if (!_executable) {
+        _executable = [NSString stringWithFormat:@"%@/%@",
                        [[NSBundle mainBundle] resourcePath],
                        @"syncthing/syncthing"];
-    [defaults setValue:_executable forKey:@"Executable"];
+    }
 
     _syncthing.URI = [defaults stringForKey:@"URI"];
     _syncthing.ApiKey = [defaults stringForKey:@"ApiKey"];
@@ -117,7 +133,7 @@
 
 - (void) sendNotification:(NSString *)text {
     NSUserNotification *notification = [[NSUserNotification alloc] init];
-    notification.title = @"Syncthing";
+    notification.title = NSLocalizedString(@"Syncthing", @"Notification title");
     notification.informativeText = text;
     [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
 }
@@ -132,7 +148,7 @@
     if (version == nil) {
         version = @"";
     }
-    NSString *toolTip = [NSString stringWithFormat:@"Syncthing %@\n%@", version, status];
+    NSString *toolTip = [NSString stringWithFormat:NSLocalizedString(@"Syncthing %@\n%@", @"Tooltip template"), version, status];
     [_statusItem.button setToolTip:toolTip];
 }
 
@@ -140,27 +156,27 @@
     switch (status) {
         case SyncthingStatusIdle:
             [self updateStatusIcon:@"StatusIconDefault"];
-            [self updateStatusTooltip:@"Up to date"];
+            [self updateStatusTooltip:NSLocalizedString(@"Up to date", @"Status tooltip")];
             [self updateConnectionStatus:true];
             break;
         case SyncthingStatusBusy:
             [self updateStatusIcon:@"StatusIconSync"];
-            [self updateStatusTooltip:@"Synchronising"];
+            [self updateStatusTooltip:NSLocalizedString(@"Synchronising", @"Status tooltip")];
             [self updateConnectionStatus:true];
             break;
         case SyncthingStatusPause:
             [self updateStatusIcon:@"StatusIconPause"];
-            [self updateStatusTooltip:@"Pause"];
+            [self updateStatusTooltip:NSLocalizedString(@"Pause", @"Status tooltip")];
             [self updateConnectionStatus:true];
             break;
         case SyncthingStatusOffline:
             [self updateStatusIcon:@"StatusIconNotify"];
-            [self updateStatusTooltip:@"Not running"];
+            [self updateStatusTooltip:NSLocalizedString(@"Not running", @"Status tooltip")];
             [self updateConnectionStatus:false];
             break;
         case SyncthingStatusError:
             [self updateStatusIcon:@"StatusIconNotify"];
-            [self updateStatusTooltip:@"Error"];
+            [self updateStatusTooltip:NSLocalizedString(@"Error", @"Status tooltip")];
             [self updateConnectionStatus:false]; // XXX: Maybe? Or what does it mean
             break;
     }
@@ -194,13 +210,13 @@
     }
 
     if (allPaused) {
-        self.toggleAllDevicesItem.title = @"Resume All Devices";
+        self.toggleAllDevicesItem.title = NSLocalizedString(@"Resume All Devices", @"Device menu item");
         [[self statusMonitor] setCurrentStatus:SyncthingStatusPause];
     } else {
-        self.toggleAllDevicesItem.title = @"Pause All Devices";
+        self.toggleAllDevicesItem.title = NSLocalizedString(@"Pause All Devices", @"Device menu item");
         [[self statusMonitor] setCurrentStatus:SyncthingStatusIdle];
     }
-    
+
     self.devicesPaused = allPaused;
 }
 
@@ -235,7 +251,7 @@
 }
 
 -(void) menuWillOpen:(NSMenu *)menu {
-	if ([[menu title] isEqualToString:@"Folders"])
+	if ([[menu title] isEqualToString:NSLocalizedString(@"Folders", @"Menu title for folders")])
         [self updateFoldersMenu:menu];
 }
 
@@ -324,13 +340,13 @@
     }
     _daemonOK = isRunning;
     if (_daemonOK) {
-        [_daemonStatusMenuItem setTitle:@"Syncthing Service (Running)"];
+        [_daemonStatusMenuItem setTitle:NSLocalizedString(@"Syncthing Service (Running)", @"Daemon status")];
         [_daemonStatusMenuItem setImage:[NSImage imageNamed:@"NSStatusAvailable"]];
         [_daemonStartMenuItem setEnabled:NO];
         [_daemonStopMenuItem setEnabled:YES];
         [_daemonRestartMenuItem setEnabled:YES];
     } else {
-        [_daemonStatusMenuItem setTitle:@"Syncthing Service (Stopped)"];
+        [_daemonStatusMenuItem setTitle:NSLocalizedString(@"Syncthing Service (Stopped)", @"Daemon status")];
         [_daemonStatusMenuItem setImage:[NSImage imageNamed:@"NSStatusUnavailable"]];
         [_daemonStartMenuItem setEnabled:YES];
         [_daemonStopMenuItem setEnabled:NO];
@@ -346,10 +362,10 @@
     }
     _connectionOK = isConnected;
     if (_connectionOK) {
-        [_connectionStatusMenuItem setTitle:@"API (Online)"];
+        [_connectionStatusMenuItem setTitle:NSLocalizedString(@"API (Online)", @"API status")];
         [_connectionStatusMenuItem setImage:[NSImage imageNamed:@"NSStatusAvailable"]];
     } else {
-        [_connectionStatusMenuItem setTitle:@"API (Offline)"];
+        [_connectionStatusMenuItem setTitle:NSLocalizedString(@"API (Offline)", @"API status")];
         [_connectionStatusMenuItem setImage:[NSImage imageNamed:@"NSStatusUnavailable"]];
     }
 
@@ -360,18 +376,18 @@
     if (_daemonOK) {
         if (_connectionOK) {
             [_statusMenuItem setImage:[NSImage imageNamed:@"NSStatusAvailable"]];
-            [_statusMenuItem setTitle:@"Online"];
+            [_statusMenuItem setTitle:NSLocalizedString(@"Online", @"Connection status")];
         } else {
             [_statusMenuItem setImage:[NSImage imageNamed:@"NSStatusPartiallyAvailable"]];
-            [_statusMenuItem setTitle:@"Running (Offline)"];
+            [_statusMenuItem setTitle:NSLocalizedString(@"Running (Offline)", @"Connection status")];
         }
     } else {
         if (_connectionOK) {
             [_statusMenuItem setImage:[NSImage imageNamed:@"NSStatusPartiallyAvailable"]];
-            [_statusMenuItem setTitle:@"Unknown (Online)"];
+            [_statusMenuItem setTitle:NSLocalizedString(@"Unknown (Online)", @"Connection status")];
         } else {
             [_statusMenuItem setImage:[NSImage imageNamed:@"NSStatusUnavailable"]];
-            [_statusMenuItem setTitle:@"Unavailable"];
+            [_statusMenuItem setTitle:NSLocalizedString(@"Unavailable", @"Connection status")];
         }
     }
 }
